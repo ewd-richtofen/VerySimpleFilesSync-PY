@@ -7,7 +7,11 @@ Run the vsfs.py
 # Next update
 
 -Automatic move the systemd with shell
+
 -Filter the folder
+
 -Whitelist, and Blacklist
+
 -Profiles list
+
 -GUI
