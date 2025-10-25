@@ -34,6 +34,8 @@ def config() -> None:
             file.write("# You can just change the path location from here,")
             file.write("# and restart the programs, or the systemd service!")
             file.write("\n")
+            file.write("from pathlib import Path")
+            file.write("\n")
             file.write(f"""server_location: Path = Path('{server_location}') """)
             file.write("\n")
             file.write(f"""client_location: Path = Path('{client_location}') """)
