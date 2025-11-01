@@ -21,7 +21,7 @@ sudo mv $systemd_service /etc/systemd/system/.
 sudo mv $systemd_timer /etc/systemd/system/.
 
 # Restart systemd_daemon and start the systemd
-sudo systemctl daemon-reaload
+sudo systemctl daemon-reload
 sudo systemctl enable vsfs.service
 sudo systemctl start vsfs.service
 sudo systemctl enable vsfs.timer
