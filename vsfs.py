@@ -168,7 +168,7 @@ def systemd() -> None:
     
     Type=oneshot
     
-    ExecStart={main_py}
+    ExecStart=/usr/bin/python3 {main_py}
     
     StandardOutput=journal
     StandardError=journal
