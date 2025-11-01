@@ -11,6 +11,7 @@ Done
 
 # Next update
 
+<<<<<<< HEAD
 - ~~Automatic move the systemd with shell~~
 
 - Filter the folder
@@ -22,3 +23,14 @@ Done
 - GUI
 
 - Make a bunch of choice, like samba, sftp, and local only
+=======
+-Automatic move the systemd with shell
+
+-Filter the folder
+
+-Whitelist, and Blacklist
+
+-Profiles list
+
+-GUI
+>>>>>>> 5356906bb759ff614f022e5c30070f7f65ed1419
