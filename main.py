@@ -5,8 +5,20 @@ from pathlib import Path
 from datetime import datetime
 from config import server_location, client_location, user_config, sftp_config
 
+"""--------------------------------- 
+||| The Initial Function To Sync |||
+---------------------------------"""
+
+# Global declaration
+server_set: set[str] = set()
+client_set: set[str] = set()
+server_side: set[str] = set()
+client_side: set[str] = set()
+
 # Initialize SFTP
 def get_sftp():
+    
+    # Try to connect to sftp server
     try:
         # If user use password
         transport = paramiko.Transport((sftp_config["host"], sftp_config["port"]))
@@ -15,7 +27,7 @@ def get_sftp():
         
         # If user have authorized_keys
         elif "id_rsa" in sftp_config:
-            key = paramiko.RSAKey.from_private_key_file(sftp_config=["id_rsa"])
+            key = paramiko.RSAKey.from_private_key_file(sftp_config=["key_path"])
             transport.connect(username=sftp_config["username"], pkey=key)
         
         else:
@@ -30,19 +42,33 @@ def get_sftp():
         
 
 # list server, and client function
-def list_server() -> set:
+def list_server(sftp) -> set[str]:
+    
+    # Returns the set of client file names
     try:
         return set(sftp.listdir(str(server_location)))
+    
+    except FileNotFoundError:
+        print(f"Remote directory not found: {server_location}")
+        return set()
     
     except Exception as e:
         print(f"Error: {e}")
         return set()
 
-def list_client() -> set:
+def list_client() -> set[str]:
+    
+    # Returns the set of client file names
+    if not client_location.exists():
+        print(f"Directory not found: {client_location}")
+        return set()
+    
     return {d.name for d in client_location.iterdir() if d.is_file()}
 
-# copy file from server to client, or client to server function
+# Copy files from server to client
 def copy_server(sftp) -> None:
+    
+    # Make individual dir of server files
     for file in server_set:
         server_file = server_location / file
 
@@ -55,8 +81,10 @@ def copy_server(sftp) -> None:
         except Exception as e:
             print(f"Error: {e}")
 
-
+#Copy files from client to server
 def copy_client(sftp) -> None:
+
+    # Make individual dir of client files
     for file in client_set:
         client_file = client_location / file
 
@@ -69,13 +97,14 @@ def copy_client(sftp) -> None:
         except Exception as e:
             print(f"Error: {e}")
 
-"""-------------------------------------------- 
-||| The main function that run this program |||
---------------------------------------------"""
+"""------------------------------- 
+||| The Configuration Function |||
+-------------------------------"""
 
 # The default configuration that make each file from server, and client 
 # will be copy each other if one of them dont have the exact same file name
-def default() -> None:
+def default(sftp) -> None:
+    
     if server_side or client_side:
 
         # The server have more files than client
@@ -89,19 +118,25 @@ def default() -> None:
         print("\nThe synchronization is complete")
 
     else:
-        print("\nDon't process the synchronization, the files already sync")
+        print("\nDon't process the synchronization, The files already Sync")
 
 # The oneside configuration it just copy file from client to server as backup option
-def oneside() -> None:
+def oneside(sftp) -> None:
+    
     if client_side:
         copy_client(sftp)
 
         print("\nThe synchronization is complete")
 
     else:
-        print("\nDon't process the synchronization, the files already sync")
+        print("\nDon't process the synchronization, The files already Sync")
+
+"""-------------------------------------- 
+||| The Main Function Of This Program |||
+--------------------------------------"""
 
 def main() -> None:
+    
     # Intialize SFTP connection
     sftp, transport = get_sftp()
     
@@ -120,10 +155,10 @@ def main() -> None:
     try:
         
         if user_config == 1:
-            default()
+            default(sftp)
 
         else:
-            oneside()
+            oneside(sftp)
         
     finally:
         # Close SFTP connection

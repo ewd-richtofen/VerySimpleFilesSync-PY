@@ -2,11 +2,13 @@ import os
 import sys
 import json
 import getpass
+import subprocess
 
 # Configuration files
 config_file: str = "config.py"
 systemd_service_file: str = "vsfs.service"
 systemd_timer_file: str = "vsfs.timer"
+move_files = "mv.sh"
 
 # Configuration input
 server_location: str = ''
@@ -123,7 +125,7 @@ def sftp():
                 "host": f"{host}",
                 "port": f"{port}",
                 "username": f"{username}",
-                "id_rsa": f"{key}"
+                "key_path": f"{key}"
             }
             
             break
@@ -141,8 +143,17 @@ def systemd() -> None:
     # Make user systemd settings
     systemd_user: str = input("Please input the name user of your systemd: ")
     systemd_group: str = input("Please input the name group of your systemd: ")
-    main_py: str = input("Please input where the main.py is located: ")
-    main_py: str = pathname(main_py)
+    
+    # Check location of this program
+    main_py = subprocess.run(
+        ["pwd"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    
+    main_py = pathname(main_py.stdout)
+    main_py = main_py + "main.py"
     
     # Systemd.service config
     systemd_service: str = f"""
@@ -226,6 +237,26 @@ def main() -> None:
                 print("\n")
                 config()
                 
+                while True:
+                    
+                    # Make choice to create default systemd, or not
+                    choice:str = input("Overwrite the previous systemd?\n:").strip().lower()
+                    
+                    if choice == "yes" or choice == "y" or choice == "":
+                        systemd()
+                        subprocess.run(["sh",move_files])
+                        print("The systemd has created!")
+                        
+                        break
+                    
+                    elif choice == "no" or choice == "n":
+                        
+                        break
+                    
+                    else:
+                        print("Your input is incorrect, please select between [yes/no]!")
+    
+            
                 break
             
             elif choice == "no" or choice == "N":
@@ -266,9 +297,8 @@ def main() -> None:
             
             if choice == "yes" or choice == "y" or choice == "":
                 systemd()
+                subprocess.run(["sh",move_files])
                 print("The systemd has created!")
-                print("You can try to move it to /etc/systemd/system")
-                print("And enable, and start the systemd")
                 
                 break
             
@@ -279,12 +309,5 @@ def main() -> None:
             else:
                 print("Your input is incorrect, please select between [yes/no]!")
         
-
-def test():
-    sftp_conf = sftp()
-    print (sftp_conf)
-    config()
-        
 if __name__ == "__main__":
-    #main()
-    test()
+    main()
