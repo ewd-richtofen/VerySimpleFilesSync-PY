@@ -1,6 +1,7 @@
 import os
 import sys
-import subprocess
+import json
+import getpass
 
 # Configuration files
 config_file: str = "config.py"
@@ -30,20 +31,25 @@ def config() -> None:
     try:
         with open(config_file, 'w') as file:
             file.write("#||| THE CONFIG LOCATION OF SERVER AND CLIENT |||")
-            file.write("\n")
+            file.write("\n\n")
             file.write("# You can just change the path location from here,")
             file.write("# and restart the programs, or the systemd service!")
-            file.write("\n")
+            file.write("\n\n")
             file.write("from pathlib import Path")
-            file.write("\n")
+            file.write("\n\n")
             file.write(f"""server_location: Path = Path('{server_location}') """)
             file.write("\n")
             file.write(f"""client_location: Path = Path('{client_location}') """)
-            file.write("\n")
+            file.write("\n\n")
             file.write("# [1] Default: Copy each other from server to client, and client to server")
             file.write("# [2] Server Only: Just copy the client to server if the files list not same")
-            file.write("\n")
+            file.write("\n\n")
             file.write(f"user_config: int = {user_config}")
+            file.write("\n\n")
+            file.write("# The SFTP remote configuration")
+            file.write("\n\n")
+            file.write(f"sftp_config: dict = {sftp_conf}")
+            
         
     except Exception as e:
         print(f"Error: {e}")
@@ -75,6 +81,61 @@ def user() -> int:
         
     return user_config
 
+def sftp():
+    
+    # Make sftp configuration file
+    while True:
+        
+        # Input the user sftp
+        username: str = input("Please input username!: ")
+        host: str = input("Please input host!: ")
+        port: int = int(input("Please input port!: "))
+        
+        while True:
+            
+            # Input option
+            print("Do you want login with key or password?")
+            user_input: str = input("[K/P]: ")
+            user_input: str = user_input.upper()
+            
+            if user_input == "K" or user_input == "P":
+                break
+            
+            else:
+                print("Invalid input!")
+        
+        if user_input == "P":
+            password: str = getpass.getpass("Please input password!: ")
+            
+            sftp_config: dict = {
+                "host": f"{host}",
+                "port": port,
+                "username": f"{username}",
+                "password": f"{password}"
+            }
+            
+            break
+        
+        elif user_input == "K":
+            key: str = input("Please input your key location!: ")
+
+            sftp_config: dict = {
+                "host": f"{host}",
+                "port": f"{port}",
+                "username": f"{username}",
+                "id_rsa": f"{key}"
+            }
+            
+            break
+            
+        else:
+            print(f"Invalid input: {user_input}")
+
+    global sftp_conf
+    sftp_conf = json.dumps(sftp_config, indent=4)
+    
+    return sftp_conf
+            
 def systemd() -> None:
     
     # Make user systemd settings
@@ -160,6 +221,9 @@ def main() -> None:
                 print("[1] Default: Copy each other from server to client, and client to server")
                 print("[2] Server Only: Just copy the client to server if the files list not same")
                 user_config = user()
+                print("Please input the SFTP configuration!")
+                sftp_conf = sftp()
+                print("\n")
                 config()
                 
                 break
@@ -184,9 +248,14 @@ def main() -> None:
         print("[1] Default: Copy each other from server to client, and client to server")
         print("[2] Server Only: Just copy the client to server if the files list not same")
         user_config = user()
-        config()
         print("\n")
         
+        print("Please input the SFTP configuration!")
+        sftp_conf = sftp()
+        config()
+
+        print("\n")
+
         print("Write the configuration complete")
         print("\n")
         
@@ -210,6 +279,12 @@ def main() -> None:
             else:
                 print("Your input is incorrect, please select between [yes/no]!")
         
+
+def test():
+    sftp_conf = sftp()
+    print (sftp_conf)
+    config()
         
 if __name__ == "__main__":
-    main()
+    #main()
+    test()
