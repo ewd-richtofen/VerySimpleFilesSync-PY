@@ -6,7 +6,7 @@ from datetime import datetime
 from config import server_location, client_location, user_config, sftp_config
 
 """--------------------------------- 
-||| The Initial Function To Sync |||
+||| The Essential Function To Sync |||
 ---------------------------------"""
 
 # Global declaration
