@@ -157,43 +157,43 @@ def systemd() -> None:
     
     # Systemd.service config
     systemd_service: str = f"""
-    [Unit]
-    Description=Very Simple Files Sync
-    Requires=network-online.target
-    After=network-online.target
-    
-    [Service]
-    User={systemd_user}
-    Group={systemd_group}
-    
-    Type=oneshot
-    
-    ExecStart=/usr/bin/python3 {main_py}
-    
-    StandardOutput=journal
-    StandardError=journal
-    
-    Restart=on-failure
-    
-    [Install]
-    WantedBy=multi-user.target
-    """
-    
+[Unit]
+Description=Very Simple Files Sync
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+User={systemd_user}
+Group={systemd_group}
+
+Type=oneshot
+
+ExecStart=/usr/bin/python3 {main_py}
+
+StandardOutput=journal
+StandardError=journal
+
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+"""
+
     # Make the time sync
     print("This system will be run every one hour, you can change it in vsfs.timer")
     
     systemd_timer: str = """
-    [Unit]
-    Description=Run the VSFS every one hour
-    
-    [Timer]
-    OnCalender=*-*-* *:00:00
-    
-    Persistent=true
-    
-    [Install]
-    WantedBy=timers.target
-    """
+[Unit]
+Description=Run the VSFS every one hour
+
+[Timer]
+OnCalender=*-*-* *:00:00
+
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+"""
     
     try:
         with open(systemd_service_file, 'w') as service:
