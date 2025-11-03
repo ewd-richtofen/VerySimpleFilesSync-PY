@@ -70,10 +70,11 @@ def copy_server(sftp) -> None:
     
     # Make individual dir of server files
     for file in server_set:
-        server_file = server_location / file
+        remote_file = str(server_location / file)
+        local_file = client_location / file
 
         try:
-            sftp.get(server_file, client_location)
+            sftp.get(remote_file, str(local_file))
         except FileNotFoundError as e:
             print(f"Error: {e}")
         except PermissionError as e:
@@ -86,10 +87,11 @@ def copy_client(sftp) -> None:
 
     # Make individual dir of client files
     for file in client_set:
-        client_file = client_location / file
+        local_file = client_location / file
+        remote_file = str(server_location / file)
 
         try:
-            sftp.put(client_file, server_location)
+            sftp.put(str(local_file), remote_file)
         except FileNotFoundError as e:
             print(f"Error: {e}")
         except PermissionError as e:
