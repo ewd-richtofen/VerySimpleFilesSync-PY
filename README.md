@@ -1,7 +1,7 @@
 # Very Simple Files Sync in Python
-<i>Warning</i>
+<i>Warning!!!</i>
 
-This programs for now can only serve sftp as server side!!!
+This programs for now, Only can serve sftp as server side!!!
 
 # How to use
 
@@ -17,7 +17,7 @@ Done
 
 - ~~Automatic move the systemd with shell~~
 
-- Filter the folder
+- ~~Filter the folder~~
 
 - Whitelist, and Blacklist
 

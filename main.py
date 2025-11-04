@@ -28,7 +28,7 @@ def get_sftp():
         
         # If user have authorized_keys
         elif "key_path" in sftp_config:
-            key = paramiko.RSAKey.from_private_key_file(sftp_config=["key_path"])
+            key = paramiko.RSAKey.from_private_key_file(sftp_config["key_path"])
             transport.connect(username=sftp_config["username"], pkey=key)
         
         else:

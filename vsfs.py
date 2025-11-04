@@ -14,6 +14,7 @@ move_files = "mv.sh"
 server_location: str = ''
 client_location: str = ''
 user_config: int = 0
+sftp_conf: str = '{}'
 
 # To change the path to global path and correct the path if user forgot add slash
 def pathname(path: str) -> str:
@@ -27,7 +28,7 @@ def pathname(path: str) -> str:
     
     return path
  
-def config() -> None:
+def config(server_loc: str, client_loc: str, user_cfg: int, sftp_cfg: str) -> None:
     
     # Write file config.py
     try:
@@ -39,19 +40,20 @@ def config() -> None:
             file.write("\n\n")
             file.write("from pathlib import Path")
             file.write("\n\n")
-            file.write(f"""server_location: Path = Path('{server_location}') """)
+            file.write(f"""server_location: Path = Path('{server_loc}') """)
             file.write("\n")
-            file.write(f"""client_location: Path = Path('{client_location}') """)
+            file.write(f"""client_location: Path = Path('{client_loc}') """)
             file.write("\n\n")
             file.write("# [1] Default: Copy each other from server to client, and client to server")
             file.write("# [2] Server Only: Just copy the client to server if the files list not same")
             file.write("\n\n")
-            file.write(f"user_config: int = {user_config}")
+            file.write(f"user_config: int = {user_cfg}")
             file.write("\n\n")
             file.write("# The SFTP remote configuration")
             file.write("\n\n")
-            file.write(f"sftp_config: dict = {sftp_conf}")
+            file.write(f"sftp_config: dict = {sftp_cfg}")
             
+        print(f"{config_file} has been written successfully.")
         
     except Exception as e:
         print(f"Error: {e}")
@@ -59,8 +61,8 @@ def config() -> None:
 def location() -> tuple[str, str]:
     
     # Make user to input the path location
-    server_location: str = input("Please input the server location!\n: ")
-    client_location: str = input("Please input the client location!\n: ")
+    server_location: str = input("Please input the server location!\n> ")
+    client_location: str = input("Please input the client location!\n> ")
     server_location: str = pathname(server_location)
     client_location: str = pathname(client_location)
     
@@ -107,7 +109,7 @@ def sftp():
                 print("Invalid input!")
         
         if user_input == "P":
-            password: str = getpass.getpass("Please input password!: ")
+            password: str = getpass.getpass("Please input password!\n: ")
             
             sftp_config: dict = {
                 "host": f"{host}",
@@ -119,11 +121,11 @@ def sftp():
             break
         
         elif user_input == "K":
-            key: str = input("Please input your key location!: ")
+            key: str = input("Please input your key location!\n> ")
 
             sftp_config: dict = {
                 "host": f"{host}",
-                "port": f"{port}",
+                "port": port,
                 "username": f"{username}",
                 "key_path": f"{key}"
             }
@@ -132,11 +134,8 @@ def sftp():
             
         else:
             print(f"Invalid input: {user_input}")
-
-    global sftp_conf
-    sftp_conf = json.dumps(sftp_config, indent=4)
     
-    return sftp_conf
+    return json.dumps(sftp_config, indent=4)
             
 def systemd() -> None:
     
@@ -187,7 +186,7 @@ WantedBy=multi-user.target
 Description=Run the VSFS every one hour
 
 [Timer]
-OnCalender=*-*-* *:00:00
+OnCalendar=*-*-* *:00:00
 
 Persistent=true
 
@@ -235,7 +234,7 @@ def main() -> None:
                 print("Please input the SFTP configuration!")
                 sftp_conf = sftp()
                 print("\n")
-                config()
+                config(server_location, client_location, user_config, sftp_conf)
                 
                 while True:
                     
@@ -250,6 +249,7 @@ def main() -> None:
                         break
                     
                     elif choice == "no" or choice == "n":
+                        print("Okey, nothing has change")
                         
                         break
                     
@@ -283,7 +283,7 @@ def main() -> None:
         
         print("Please input the SFTP configuration!")
         sftp_conf = sftp()
-        config()
+        config(server_location, client_location, user_config, sftp_conf)
 
         print("\n")
 
@@ -293,7 +293,7 @@ def main() -> None:
         while True:
             
             # Make choice to create default systemd, or not
-            choice:str = input("Create the default systemd for vsfs?\n:").strip().lower()
+            choice:str = input("Create the default systemd for vsfs?\n: ").strip().lower()
             
             if choice == "yes" or choice == "y" or choice == "":
                 systemd()
