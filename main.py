@@ -448,6 +448,7 @@ def list_server_files():
         
     finally:
         sftp.close()
+        print("\n")
 
 # Transfer files from server to client
 def get_files() -> None:
@@ -475,6 +476,7 @@ def get_files() -> None:
 
     finally:
         sftp.close()
+        print("\n")
 
 # Transfer files from client to server  
 def put_files() -> None:
@@ -502,6 +504,7 @@ def put_files() -> None:
 
     finally:
         sftp.close()
+        print("\n")
 
 # Deletes the file from server is there files that not in client
 def delete_server() -> None:
@@ -585,6 +588,7 @@ def delete_server() -> None:
 
     finally:
         sftp.close()
+        print("\n")
         
 # Deletes the file from client is there files that not in server
 def delete_client() -> None:
@@ -654,6 +658,7 @@ def delete_client() -> None:
 
     finally:
         sftp.close()
+        print("\n")
 
 """-------------------------------------- 
 ||| The Main Function Of This Program |||
