@@ -3,6 +3,7 @@ import sys
 import json
 import getpass
 import subprocess
+from main import list_server_files, get_files, put_files, delete_server, delete_client
 
 # Configuration files
 config_file: str = "config.py"
@@ -89,7 +90,7 @@ def sftp():
     
     # Make sftp configuration file
     while True:
-        
+
         # Input the user sftp
         username: str = input("Please input username!: ")
         host: str = input("Please input host!: ")
@@ -107,35 +108,35 @@ def sftp():
             
             else:
                 print("Invalid input!")
-        
-        if user_input == "P":
-            password: str = getpass.getpass("Please input password!\n: ")
             
-            sftp_config: dict = {
-                "host": f"{host}",
-                "port": port,
-                "username": f"{username}",
-                "password": f"{password}"
-            }
+            if user_input == "P":
+                password: str = getpass.getpass("Please input password!\n: ")
+                
+                sftp_config: dict = {
+                    "host": f"{host}",
+                    "port": port,
+                    "username": f"{username}",
+                    "password": f"{password}"
+                }
+                
+                break
             
-            break
-        
-        elif user_input == "K":
-            key: str = input("Please input your key location!\n> ")
+            elif user_input == "K":
+                key: str = input("Please input your key location!\n> ")
 
-            sftp_config: dict = {
-                "host": f"{host}",
-                "port": port,
-                "username": f"{username}",
-                "key_path": f"{key}"
-            }
-            
-            break
-            
-        else:
-            print(f"Invalid input: {user_input}")
-    
-    return json.dumps(sftp_config, indent=4)
+                sftp_config: dict = {
+                    "host": f"{host}",
+                    "port": port,
+                    "username": f"{username}",
+                    "key_path": f"{key}"
+                }
+                
+                break
+                
+            else:
+                print(f"Invalid input: {user_input}")
+        
+        return json.dumps(sftp_config, indent=4)
             
 def systemd() -> None:
     
@@ -179,14 +180,14 @@ WantedBy=multi-user.target
 """
 
     # Make the time sync
-    print("This system will be run every one hour, you can change it in vsfs.timer")
+    print("This system will be run every day, you can change it in vsfs.timer")
     
     systemd_timer: str = """
 [Unit]
-Description=Run the VSFS every one hour
+Description=Run the VSFS every day
 
 [Timer]
-OnCalendar=*-*-* *:00:00
+OnCalendar=daily
 
 Persistent=true
 
@@ -205,91 +206,80 @@ WantedBy=timers.target
 
 
 
+##########################################################
 """ Main section programs for user input path location """
+##########################################################
 
-def main() -> None:
+
+
+def write_config() -> None:
     
      # Declare global variable
     global server_location, client_location, user_config
 
-    
     if os.path.exists(config_file):
-        print("|| WELCOME TO VERY SIMPLE FILE SYNC ||")
         print("The file config is already exist!")
         print("Is you want to change it?")
-        print("[yes/no]")
+        print("[y/N]")
         
         while True:
             
             # Make a choice to replace the existed config or not
             choice: str = input(": ").strip().lower()
+            print("\n")
            
-            if choice == "yes" or choice == "y":
+            if choice == "" or choice == "y" or choice == "Y":
                 print("Now fill the path location again!\n")
+
                 server_location, client_location = location()
                 print("please choice the sync settings!")
                 print("[1] Default: Copy each other from server to client, and client to server")
                 print("[2] Server Only: Just copy the client to server if the files list not same")
+                
                 user_config = user()
                 print("Please input the SFTP configuration!")
+
                 sftp_conf = sftp()
                 print("\n")
+
                 config(server_location, client_location, user_config, sftp_conf)
                 
-                while True:
-                    
-                    # Make choice to create default systemd, or not
-                    choice:str = input("Overwrite the previous systemd?\n:").strip().lower()
-                    
-                    if choice == "yes" or choice == "y" or choice == "":
-                        systemd()
-                        subprocess.run(["sh",move_files])
-                        print("The systemd has created!")
-                        
-                        break
-                    
-                    elif choice == "no" or choice == "n":
-                        print("Okey, nothing has change")
-                        
-                        break
-                    
-                    else:
-                        print("Your input is incorrect, please select between [yes/no]!")
-    
-            
                 break
-            
-            elif choice == "no" or choice == "N":
-                print("Okey, nothing has change")
+                
+            elif choice == "n" or choice == "N" :
+                print("Okey, Nothing has change")
                 
                 break
             
             else:
-                print("Your input is incorrect, please select between [yes/no]!")
-            
+                print(f"Invalid input: {choice}")
+                
     else:
                 
-        print("|| WELCOME TO VERY SIMPLE FILE SYNC ||")
+        print("Creating the config file!!!")
         print("Please input your server location, and client location!")
-        print("to continue the VERY SIMPLE FILE SYNC program")
+
         server_location, client_location = location()
         print("\n")
         
         print("please choice the sync settings!")
         print("[1] Default: Copy each other from server to client, and client to server")
         print("[2] Server Only: Just copy the client to server if the files list not same")
+
         user_config = user()
         print("\n")
         
         print("Please input the SFTP configuration!")
+
         sftp_conf = sftp()
         config(server_location, client_location, user_config, sftp_conf)
-
         print("\n")
 
         print("Write the configuration complete")
         print("\n")
-        
+
+def write_systemd() -> None:
+
         while True:
             
             # Make choice to create default systemd, or not
@@ -309,5 +299,77 @@ def main() -> None:
             else:
                 print("Your input is incorrect, please select between [yes/no]!")
         
+
+# Main menu
+def menu() -> None:
+    
+    # Show menu options
+    print("Menu option list!")
+    print("[1] -> Make/Change configuration!")
+    print("[2] -> Get client files!")
+    print("[3] -> Put server files!")
+    print("[4] -> List Server!")
+    print("[5] -> Deletes files!")
+    print("[6] -> Make systemd!")
+    print("[0] -> Exit!!!")
+
+    user_input: int = int(input("> "))
+    
+    while True:
+        
+        if user_input == 1 :
+            write_config()
+            
+            break
+        
+        elif user_input == 2 :
+            get_files()
+            
+            break
+                
+        elif user_input == 3 :
+            put_files()
+
+            break
+            
+        elif user_input == 4 :
+            list_server_files()
+            
+            break
+        
+        elif user_input == 5 :
+            print("\n")
+            print("Deletes [server] or [client]")
+            another_input = input("-> ")
+
+            while True:
+
+                if another_input == "server":
+                    delete_server()
+
+                    break
+
+                elif another_input == "client":
+                    delete_client()
+
+                    break
+
+                else:
+                    print("Please select avaible options")
+
+            break
+         
+        elif user_input == 6 :
+            systemd()
+            
+            break
+        
+        elif user_input == 0 :
+            sys.exit(0)
+
+        else:
+            continue
+
 if __name__ == "__main__":
-    main()
+    while True:
+        menu()
