@@ -138,7 +138,8 @@ def sftp():
             
         else:
             print(f"Invalid input: {user_input}")
-
+    while True:
+        
         print("\nSFTP Config Preview:")
         print(json.dumps(sftp_config, indent=4))
         confirm = input("\nIs this correct? [Y/n]: ").strip().lower()
