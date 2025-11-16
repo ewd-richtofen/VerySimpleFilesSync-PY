@@ -305,7 +305,7 @@ def menu() -> None:
     
     # Show menu options
     print("Menu option list!")
-    print("[1] -> Make/Change configuration!")
+    print("[1] -> Create/Change configuration!")
     print("[2] -> Get client files!")
     print("[3] -> Put server files!")
     print("[4] -> List Server!")
