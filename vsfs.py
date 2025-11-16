@@ -15,7 +15,7 @@ move_files = "mv.sh"
 server_location: str = ''
 client_location: str = ''
 user_config: int = 0
-sftp_conf: str = '{}'
+sftp_conf = '{}'
 
 # To change the path to global path and correct the path if user forgot add slash
 def pathname(path: str) -> str:
@@ -96,6 +96,8 @@ def sftp():
         host: str = input("Please input host!: ")
         port: int = int(input("Please input port!: "))
         
+        sftp_config = {"host": host, "port": port, "username": username}
+        
         while True:
             
             # Input option
@@ -103,40 +105,52 @@ def sftp():
             user_input: str = input("[K/P]: ")
             user_input: str = user_input.upper()
             
-            if user_input == "K" or user_input == "P":
-                break
-            
-            else:
+            if user_input not in ("K", "P"):
                 print("Invalid input!")
+                
+                continue
             
-            if user_input == "P":
-                password: str = getpass.getpass("Please input password!\n: ")
-                
-                sftp_config: dict = {
-                    "host": f"{host}",
-                    "port": port,
-                    "username": f"{username}",
-                    "password": f"{password}"
-                }
-                
-                break
+            break
             
-            elif user_input == "K":
-                key: str = input("Please input your key location!\n> ")
-
-                sftp_config: dict = {
-                    "host": f"{host}",
-                    "port": port,
-                    "username": f"{username}",
-                    "key_path": f"{key}"
-                }
-                
-                break
-                
-            else:
-                print(f"Invalid input: {user_input}")
+        if user_input == "P":
+            password: str = getpass.getpass("Please input password!\n: ")
+            
+            sftp_config: dict = {
+                "host": f"{host}",
+                "port": port,
+                "username": f"{username}",
+                "password": f"{password}"
+            }
+            
+            break
         
-        return json.dumps(sftp_config, indent=4)
+        elif user_input == "K":
+            key: str = input("Please input your key location!\n> ")
+
+            sftp_config: dict = {
+                "host": f"{host}",
+                "port": port,
+                "username": f"{username}",
+                "key_path": f"{key}"
+            }
+            
+            break
+            
+        else:
+            print(f"Invalid input: {user_input}")
+
+        print("\nSFTP Config Preview:")
+        print(json.dumps(sftp_config, indent=4))
+        confirm = input("\nIs this correct? [Y/n]: ").strip().lower()
+        
+        if confirm in ("", "y", "yes"):
+            
+            return json.dumps(sftp_config, indent=4)
+        
+        else:
+            print("Restarting configuration...\n")
+            
+            continue
             
 def systemd() -> None:
     
