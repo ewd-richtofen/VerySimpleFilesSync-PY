@@ -3,19 +3,26 @@ import sys
 import json
 import getpass
 import subprocess
-from main import list_server_files, get_files, put_files, delete_server, delete_client
+from pathlib import Path
+from core.main import list_server_files, get_files, put_files, delete_server, delete_client
 
 # Configuration files
-config_file: str = "config.py"
+config_dir: Path = Path("config")
+config_dir.mkdir(exist_ok=True)
+config_file: Path = config_dir / "config.py"
 systemd_service_file: str = "vsfs.service"
 systemd_timer_file: str = "vsfs.timer"
-move_files = "mv.sh"
+move_files = "activate.sh"
 
 # Configuration input
 server_location: str = ''
 client_location: str = ''
 user_config: int = 0
 sftp_conf = '{}'
+
+"""--------------------------- 
+||| The Essential Function |||
+---------------------------"""
 
 # To change the path to global path and correct the path if user forgot add slash
 def pathname(path: str) -> str:
@@ -138,8 +145,10 @@ def sftp():
             
         else:
             print(f"Invalid input: {user_input}")
+            
     while True:
         
+        # Make sure user SFTP profile is correct
         print("\nSFTP Config Preview:")
         print(json.dumps(sftp_config, indent=4))
         confirm = input("\nIs this correct? [Y/n]: ").strip().lower()
@@ -168,7 +177,7 @@ def systemd() -> None:
     )
     
     main_py = pathname(main_py.stdout)
-    main_py = main_py + "main.py"
+    main_py = main_py + "/core/sync.py"
     
     # Systemd.service config
     systemd_service: str = f"""
@@ -195,7 +204,7 @@ WantedBy=multi-user.target
 """
 
     # Make the time sync
-    print("This system will be run every day, you can change it in vsfs.timer")
+    print("This system will be run every Day(24h), you can change it in vsfs.timer")
     
     systemd_timer: str = """
 [Unit]
@@ -219,13 +228,9 @@ WantedBy=timers.target
     except Exception as e:
         print(f"Error: {e}")
 
-
-
-##########################################################
-""" Main section programs for user input path location """
-##########################################################
-
-
+"""---------------------- 
+||| The Menu Function |||
+----------------------"""
 
 def write_config() -> None:
     
@@ -298,7 +303,8 @@ def write_systemd() -> None:
         while True:
             
             # Make choice to create default systemd, or not
-            choice:str = input("Create the default systemd for vsfs?\n: ").strip().lower()
+            print("Create the default systemd for vsfs?")
+            choice:str = input("[yes/no]: ").strip().lower()
             
             if choice == "yes" or choice == "y" or choice == "":
                 systemd()
@@ -312,8 +318,12 @@ def write_systemd() -> None:
                 break
             
             else:
-                print("Your input is incorrect, please select between [yes/no]!")
+                
+                continue
         
+#############################################
+""" Main section programs for Menu Option """
+#############################################
 
 # Main menu
 def menu() -> None:
