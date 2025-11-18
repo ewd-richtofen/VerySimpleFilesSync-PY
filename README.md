@@ -11,6 +11,15 @@ Try to clone the reposity to your machine. `git clone https://github.com/ewd-ric
 
 Try run the binary `./dist/verysimplefilesync`, if you want run the python file run on main directory `python3 vsfs.py`
 
+Python dependencies that required !
+
+```
+python-paramiko
+python-colorama
+```
+
+<b>SECOND</b>
+
 <details>
 <summary>[1] Create/Change configuration!</summary>
 
