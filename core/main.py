@@ -190,10 +190,36 @@ def copy_server(sftp, download: list[str]) -> None:
     
     # Make individual dir of server files
     for file in download:
+        if not file.strip():
+            
+            continue
+        
         print(f"  → {file}")
         remote_file = str(server_location / file)
         local_file = client_location / file
-        local_file.parent.mkdir(parents=True, exist_ok=True)
+        local_dir = local_file.parent
+
+        # Fix conflict files and dir
+        #_____________________________
+
+        if local_dir != client_location:
+            if local_dir.exists():
+                if not local_dir.is_dir():
+                    print(f"[SKIP] {file}")
+                    print(f"[CONFLICT] {local_dir} is FILE, not DIR")
+                    
+                    continue
+                   
+            else:
+                try:
+                    local_dir.mkdir(parents=True, exist_ok=True)
+                    
+                except Exception as e:
+                    print(f" [ERROR] Cannot create local dir {local_dir}: {e}")
+                    
+                    continue
+
+                    
 
         # Cause paramiko dosn't support callback, wrap the sfpt.get that update tqdm
         try:
@@ -232,6 +258,32 @@ def copy_client(sftp, upload: list[str]) -> None:
         # Creating sub-folder for remote files
         remote_dir = os.path.dirname(remote_file)
         _mkdir_p(sftp, remote_dir)
+        
+        # Fix conflict files and dir
+        #_____________________________
+        
+        if remote_dir and remote_dir != str(server_location):
+            
+            try:
+                # Check what already exist at remote_dir
+                status = sftp.stat(remote_dir)
+                
+                # If directory it pass and continue
+                if stat.S_ISDIR(status.st_mode):
+                    
+                    pass 
+                
+                # If files it continue and ignore
+                else:
+                    print(f"[SKIP] {file}")
+                    print(f"[CONFLICT] {remote_dir} is FILE, not DIR")
+                    
+                    continue
+                
+            except FileNotFoundError:
+                _mkdir_p(sftp, remote_dir)
+                
+        #______________________________
 
         # Cause paramiko dosn't support callback, wrap the sfpt.put that update tqdm
         try:
@@ -264,13 +316,25 @@ def _mkdir_p(sftp, remote_dir: str):
     try:
         sftp.sftp.listdir(remote_dir)
         
+        return
+        
     except FileNotFoundError:
         parent = os.path.dirname(remote_dir)
         
         if parent and parent != remote_dir:
             _mkdir_p(sftp, parent)
-
-        sftp.sftp.mkdir(remote_dir)
+            
+        try:
+            sftp.sftp.mkdir(remote_dir)
+            print(f"[CREATE DIR] -> {remote_dir}")
+            
+        except OSError as e:
+            if e.errno != 17:
+                
+                raise
+            
+    except Exception as e:
+        print(f"[ERROR] Failed to create dir {remote_dir}: {e}")
 
 """--------------------------- 
 ||| The Essential Function |||
