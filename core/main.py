@@ -5,10 +5,10 @@ import paramiko
 from pathlib import Path
 from datetime import datetime
 from config.config import server_location, client_location, user_config, sftp_config
-from typing import Dict, Tuple
+from typing import Dict
 from colorama import Fore, Style, init
 
-# Intialise colourama
+# Intialise colourama to reset color
 init(autoreset=True)
 
 # Global declaration
@@ -23,7 +23,7 @@ files_map = Dict[str, int]       # For Relative paths -> Information
 class SFTP:
     
     # Manage the SFTP connection cycle
-    def __init__(self) -> None:
+    def __init__(self):
         self.sftp = None
         self.transport = None
         
@@ -44,7 +44,7 @@ class SFTP:
             self.sftp = paramiko.SFTPClient.from_transport(self.transport)
 
         except Exception as e:
-            print(f"Error establishing SFTP connection: {e}")
+            print(f"{Fore.RED}[ERROR] establishing SFTP connection: {e}")
             
             if self.transport:
                 self.transport.close()
@@ -150,7 +150,7 @@ def list_server(sftp_manager) -> files_map:
         _walk(server_path)
     
     except Exception as e:
-        print(f"Error walking to server tree: {e}")
+        print(f"{Fore.RED}[ERROR] walking to server tree: {e}")
         
     return result
         
@@ -188,6 +188,12 @@ def list_client() -> files_map:
 # Copy files from server to client
 def copy_server(sftp, download: list[str]) -> None:
     
+    if not download:
+        
+        return
+    
+    make_local_dir(download)
+    
     # Make individual dir of server files
     for file in download:
         if not file.strip():
@@ -204,22 +210,33 @@ def copy_server(sftp, download: list[str]) -> None:
 
         if local_dir != client_location:
             if local_dir.exists():
-                if not local_dir.is_dir():
-                    print(f"[SKIP] {file}")
-                    print(f"[CONFLICT] {local_dir} is FILE, not DIR")
+                if local_dir.is_dir():
+                    
+                    pass
+                
+                else:
+                    # Conflict local_dir but is a file -> DELETE
+                    print(f"{Fore.RED}[CONFLICT] {local_dir} is FILE, removing and create {Fore.YELLOW}DIRECTORY")
+                    
+                    try:
+                        local_dir.unlink()
+                        
+                    except Exception as e:
+                        print(f"{Fore.RED}[FATAL] Cannot remove conflicting file {local_dir}: {e}")
                     
                     continue
                    
             else:
+                
                 try:
-                    local_dir.mkdir(parents=True, exist_ok=True)
+                    is_directory(local_dir)
                     
                 except Exception as e:
-                    print(f" [ERROR] Cannot create local dir {local_dir}: {e}")
+                    print(f"{Fore.RED}[ERROR] Cannot create local dir {local_dir}: {e}")
                     
                     continue
 
-                    
+        #_____________________________
 
         # Cause paramiko dosn't support callback, wrap the sfpt.get that update tqdm
         try:
@@ -238,13 +255,13 @@ def copy_server(sftp, download: list[str]) -> None:
                 print(f"Warning: Invalid mtime {remote_mtime} for {file}")
                        
         except FileNotFoundError as e:
-            print(f"Error: {e}")
+            print(f"{Fore.RED}[ERROR] FileNotFoundError: {e}")
             
         except PermissionError as e:
-            print(f"Error: {e}")
+            print(f"{Fore.RED}[ERROR] PermissionError: {e}")
             
         except Exception as e:
-            print(f"Failed Download {file}: {e}")
+            print(f"{Fore.RED}[FAILED] Download {file}: {e}")
 
 #Copy files from client to server
 def copy_client(sftp, upload: list[str]) -> None:
@@ -269,16 +286,11 @@ def copy_client(sftp, upload: list[str]) -> None:
                 status = sftp.stat(remote_dir)
                 
                 # If directory it pass and continue
-                if stat.S_ISDIR(status.st_mode):
-                    
-                    pass 
-                
-                # If files it continue and ignore
-                else:
-                    print(f"[SKIP] {file}")
-                    print(f"[CONFLICT] {remote_dir} is FILE, not DIR")
-                    
-                    continue
+                if not stat.S_ISDIR(status.st_mode):
+                    # Conflict remote_dir but is a file -> DELETE
+                    print(f"{Fore.RED}[CONFLICT] {remote_dir} is FILE, removing and create {Fore.YELLOW}DIRECTORY")
+                    sftp.remove(remote_dir)
+                    _mkdir_p(sftp, remote_dir)
                 
             except FileNotFoundError:
                 _mkdir_p(sftp, remote_dir)
@@ -298,19 +310,23 @@ def copy_client(sftp, upload: list[str]) -> None:
                 sftp.sftp.utime(remote_file, (client_mtime, client_mtime))
             
             except Exception as e:
-                print(f"[WARN] Failed to set mtime on server for {file}: {e}")
+                print(f"{Fore.RED}[WARN] Failed to set mtime on server for {file}: {e}")
             
         except FileNotFoundError as e:
-            print(f"Error: {e}")
+            print(f"{Fore.RED}[ERROR] FileNotFound: {e}")
             
         except PermissionError as e:
-            print(f"Error: {e}")
+            print(f"{Fore.RED}[ERROR] PermissionError: {e}")
             
         except Exception as e:
-            print(f"Failed Upload {file}: {e}")
+            print(f"{Fore.RED}[FAILED] Upload {file}: {e}")
             
 # Making a dir if is not there
 def _mkdir_p(sftp, remote_dir: str):
+    
+    if not remote_dir or remote_dir in (".", "/"):
+        
+        return
     
     # Create remote directory recursively
     try:
@@ -318,23 +334,70 @@ def _mkdir_p(sftp, remote_dir: str):
         
         return
         
-    except FileNotFoundError:
-        parent = os.path.dirname(remote_dir)
-        
-        if parent and parent != remote_dir:
-            _mkdir_p(sftp, parent)
+    except IOError as e:
+        if getattr(e, 'errno', None) in (20, None) or 'not a directory' in str(e).lower():
+            print(f"{Fore.RED}[CONFLICT] Removing file blocking directory: {remote_dir}")
             
-        try:
-            sftp.sftp.mkdir(remote_dir)
-            print(f"[CREATE DIR] -> {remote_dir}")
-            
-        except OSError as e:
-            if e.errno != 17:
+            try:
                 
-                raise
+                sftp.remove(remote_dir)
+                
+            except:
+                
+                pass
             
+    parent = os.path.dirname(remote_dir.rstrip('/'))
+    if parent and parent != remote_dir:
+        _mkdir_p(sftp, parent)
+            
+    try:
+        sftp.sftp.mkdir(remote_dir)
+        print(f"{Fore.YELLOW}{Style.BRIGHT}[CREATE DIR]{Style.RESET_ALL} -> {remote_dir}")
+                    
     except Exception as e:
-        print(f"[ERROR] Failed to create dir {remote_dir}: {e}")
+        if "File exists" not in str(e) and "already exists" not in str(e).lower():
+            print(f"{Fore.RED}[ERROR] Failed to create dir {remote_dir}: {e}")
+
+# Making sure if dir
+def is_directory(path: Path):
+    
+    if path.exists() and not path.is_dir():
+        print(f"{Fore.RED}[FIXING] Removing file blocking directory: {path}")
+        
+        try:
+            path.unlink()
+            
+        except Exception as e:
+            raise RuntimeError(f"Cannot remove conflicting file {path}: {e}")
+        
+    path.mkdir(parents=True, exist_ok=True)
+
+# Make a directory on local from sftp dir tree
+def make_local_dir(download_list: list[str]):
+    
+    # Create parent dir for files will be download
+    created = set()
+    
+    for file in download_list:
+        if not file.strip():
+            
+            continue
+        
+        local_path = client_location / file
+        dir_path = local_path.parent if local_path.suffix else local_path
+        if dir_path != client_location and dir_path not in created:
+            
+            try:
+                if dir_path.exists() and not dir_path.is_dir():
+                    print(f"{Fore.RED}[CONFLICT] Removing file blocking directory: {dir_path}")
+                    dir_path.unlink()
+                    
+                dir_path.mkdir(parents=True, exist_ok=True)
+                print(f"{Fore.CYAN}[DIR] Ensured: {str(dir_path.relative_to(client_location))}/")
+                created.add(dir_path)
+                
+            except Exception as e:
+                print(f"{Fore.RED}[ERROR] Failed to create directory {dir_path}: {e}")
 
 """--------------------------- 
 ||| The Essential Function |||
@@ -350,8 +413,8 @@ def compute_diffs(server_map: files_map, client_map: files_map):
     all_location = set(server_map) | set(client_map)
     
     for relative in all_location:
-        server_size = server_map.get(relative)
-        client_size = client_map.get(relative)
+        server_size = server_map.get(relative, None)
+        client_size = client_map.get(relative, None)
         
         if server_size is None:
             upload.append(relative)
@@ -370,7 +433,7 @@ def fix_mtime(path: str, mtime: float) -> None:
     
     # Skip termux
     if not mtime or mtime <= 0:
-        print(f"[WARN] Invalid mtime {mtime} for {path} — skipping")
+        print(f"{Fore.RED}[WARN] Invalid mtime {mtime} for {path} — skipping")
         
         return
     
@@ -389,19 +452,18 @@ def _get_progress(sftp, remote_location: str, client_location: str, desc: str) -
         # Download progres bar per (bytes)
         file_size = sftp.stat(remote_location).st_size
         download = 0
-        print(f"[DOWNLOAD] {desc} | 0 B / {file_size // 1024} KB", end="")
+        print(f"{Fore.BLUE}{Style.BRIGHT}[DOWNLOAD]{Style.RESET_ALL} {desc} | 0 B / {file_size // 1024} KB", end="")
         
         def callback(transferred, total):
             nonlocal download
             download = transferred
             percent = (transferred / file_size) * 100
-            print(f"\r[DOWNLOAD] {desc} | {transferred // 1024} KB / {file_size // 1024} KB ({percent:.1f}%)", end="")
+            print(f"\r{Fore.BLUE}{Style.BRIGHT}[DOWNLOAD]{Style.RESET_ALL} {desc} | {transferred // 1024} KB / {file_size // 1024} KB ({percent:.1f}%)", end="")
         
         sftp.sftp.get(remote_location, client_location, callback=callback)     
-        print(f"\n[OK] Downloaded: {desc}")
 
     except Exception as e:
-        print(f"\n[Error] Download failed {desc}: {e}")
+        print(f"\n{Fore.RED}[ERROR] Download failed {desc}: {e}")
 
 # Progress bar on upload
 def _put_progress(sftp, client_location: str, remote_location: str, desc: str) -> None:
@@ -410,20 +472,18 @@ def _put_progress(sftp, client_location: str, remote_location: str, desc: str) -
         # Upload progress bar per (bytes)
         file_size = os.path.getsize(client_location)
         upload = 0
-        print(f"[UPLOAD] {desc} | 0 B / {file_size // 1024} KB", end="")
+        print(f"{Fore.GREEN}{Style.BRIGHT}[UPLOAD]{Style.RESET_ALL} {desc} | 0 B / {file_size // 1024} KB", end="")
         
         def callback(transferred, total):
             nonlocal upload
             upload = transferred
             percent = (transferred / file_size) * 100
-            print(f"\r[UPLOAD] {desc} | {transferred // 1024} KB / {file_size // 1024} KB ({percent:.1f}%)", end="")
+            print(f"\r{Fore.GREEN}{Style.BRIGHT}[UPLOAD]{Style.RESET_ALL} {desc} | {transferred // 1024} KB / {file_size // 1024} KB ({percent:.1f}%)", end="")
             
-        sftp.sftp.put(client_location, remote_location, callback=callback, confirm=True)   
-            
-        print(f"\n[OK] Uploaded: {desc}")      
+        sftp.sftp.put(client_location, remote_location, callback=callback, confirm=True)       
 
     except Exception as e:
-        print(f"[Error] Upload failed {desc}: {e}")
+        print(f"{Fore.RED}[ERROR] Upload failed {desc}: {e}")
 
 """---------------------- 
 ||| The Menu Function |||
@@ -526,6 +586,9 @@ def get_files() -> None:
     client_map = list_client()
 
     download, upload = compute_diffs(server_map, client_map)
+    
+    # Fix the prompt error
+    download = [path for path in download if server_map.get(path, -1) != 0]
 
     try:
 
@@ -565,7 +628,7 @@ def put_files() -> None:
             print(f"{Fore.YELLOW}Files already in directory, Program not processing!")
 
     except Exception as e:
-        print(f"{Fore.RED}Error: {e}")
+        print(f"{Fore.RED}ERROR: {e}")
 
     finally:
         sftp.close()
@@ -612,7 +675,7 @@ def delete_server() -> None:
                 continue
             
             except Exception as e:
-                print(f"[Error] Could not get status for {path}: {e}")
+                print(f"{Fore.RED}[ERROR] Could not get status for {path}: {e}")
                 
                 continue
             
@@ -644,10 +707,10 @@ def delete_server() -> None:
                 deleted += 1
                                 
             except OSError as e:
-                print(f"[Error] {files} -> {e}")
+                print(f"{Fore.RED}[ERROR] {files} -> {e}")
                 
             except Exception as e:
-                print(f"[Unexpected] {files} -> {e}")
+                print(f"{Fore.RED}[UNEXPECTED] {files} -> {e}")
                 
         print(f"\nFinished: {deleted}/{len(delete)} items removed from server.")
 
