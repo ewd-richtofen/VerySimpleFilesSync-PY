@@ -177,7 +177,7 @@ def systemd() -> None:
     )
     
     main_py = pathname(main_py.stdout)
-    main_py = main_py + "core/sync.py"
+    main_py = main_py + "/core/sync.py"
     
     # Systemd.service config
     systemd_service: str = f"""
